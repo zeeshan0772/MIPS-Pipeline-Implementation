@@ -21,12 +21,16 @@ module top_tb;
     wire [7:0] read_data_2_wire;    // contents of register at address read_reg_2
     wire [31:0] sign_extend_wire;
     wire [98:0] ID_EX_output_port;
+    wire ID_EX_branch_wire;
     wire [7:0] ALU_op_2;
     wire [3:0] ALU_control_signal_wire;
     wire zero_wire;
     wire [7:0] ALU_result_wire;
-    wire [4:0] rt_rd_mux_output_wire;
+    wire [4:0] rt_rd_reg_address_mux_out;
+    wire [31:0] left_shift_wire;
+    wire [31:0] ID_EX_PC_value;
     wire [58:0] EX_MEM_output_port;
+    wire data_mem_MemRead_signal;
     wire PCSrc;
     wire [31:0] target_pc_wire;
     wire [7:0] data_mem_dout_wire;
@@ -35,8 +39,12 @@ module top_tb;
     wire [31:0] selected_address_for_pc;
     wire [31:0] PC_value_after_EX_MEM;
     wire [31:0] next_pc_wire;
-    wire [17:0] MEM_WB_output_port;
+    wire [7:0] data_mem_write_addr;
+    wire [7:0] data_mem_write_data;
+    
+    wire [22:0] MEM_WB_output_port;
     wire [7:0] write_back_data_wire;
+    wire [4:0] regfile_write_reg_address;
     /*wire [31:0] left_shift_wire;
     wire [31:0] branch_addr_wire;
     wire mux_sel_for_branching_wire;
@@ -69,20 +77,28 @@ module top_tb;
         .read_data_2_wire(read_data_2_wire),
         .sign_extend_wire(sign_extend_wire),
         .ID_EX_output_port(ID_EX_output_port),
+        .ID_EX_branch_wire(ID_EX_branch_wire),
         .ALU_op_2(ALU_op_2),
         .ALU_control_signal_wire(ALU_control_signal_wire),
         .zero_wire(zero_wire),
-        .ALU_result_wire(ALU_result_wire),        
-        .rt_rd_mux_output_wire(rt_rd_mux_output_wire),
+        .ALU_result_wire(ALU_result_wire), 
+        .rt_rd_reg_address_mux_out(rt_rd_reg_address_mux_out),  
+        .left_shift_wire(left_shift_wire),     
+        .ID_EX_PC_value(ID_EX_PC_value),
         .EX_MEM_output_port(EX_MEM_output_port),
+        .data_mem_MemRead_signal(data_mem_MemRead_signal),
         .PCSrc(PCSrc),
         .target_pc_wire(target_pc_wire),
         .data_mem_dout_wire(data_mem_dout_wire),
         .selected_address_for_pc(selected_address_for_pc),
         .PC_value_after_EX_MEM(PC_value_after_EX_MEM),
         .next_pc_wire(next_pc_wire),
+        .data_mem_write_addr(data_mem_write_addr),
+        .data_mem_write_data(data_mem_write_data),
+        
         .MEM_WB_output_port(MEM_WB_output_port),
-        .write_back_data_wire(write_back_data_wire)
+        .write_back_data_wire(write_back_data_wire),
+        .regfile_write_reg_address(regfile_write_reg_address)
         /*
         .left_shift_wire(left_shift_wire),
         .branch_addr_wire(branch_addr_wire),
@@ -106,7 +122,7 @@ module top_tb;
         PC_reset = 1;
         #20 
         PC_reset = 0;
-        #300 $finish;
+        #600 $finish;
     end
         
     // Clock generation

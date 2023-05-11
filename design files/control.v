@@ -2,6 +2,7 @@
 
 module control(
     input [5:0] opcode,  // Instruction opcode
+    input [5:0] funct,
     output reg RegDst,
     output reg Branch,
     output reg MemRead,
@@ -16,12 +17,22 @@ module control(
     parameter lw = 6'b100011;
     parameter sw = 6'b101011;
     parameter bne = 6'b000101;
-    
+
     // refer to pg:269 for control signal values
     
 
     always @ * begin
-        if (opcode == r_format) begin
+        if (opcode == r_format & funct == 6'b000000) begin
+            RegDst = 0;
+            Branch = 0;
+            MemRead = 0;
+            MemtoReg = 0;
+            ALUop = 2'b00;
+            MemWrite = 0;
+            ALUsrc = 0;
+            RegWrite = 0;
+        end
+        else if (opcode == r_format) begin
             RegDst = 1;
             Branch = 0;
             MemRead = 0;

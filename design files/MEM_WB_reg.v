@@ -6,7 +6,8 @@ module MEM_WB_reg(
     input RegWrite,
     input [7:0] data_mem_dout,
     input [7:0] alu_result,
-    output reg [17:0] out
+    input [4:0] mem_wb_rt_rd_reg_address,
+    output reg [22:0] out
     );
     
     initial begin
@@ -15,7 +16,9 @@ module MEM_WB_reg(
     end
     
     always @ (posedge clk) begin
-        out = { alu_result,
+        #2
+        out = { mem_wb_rt_rd_reg_address,
+                alu_result,
                 data_mem_dout,
                 RegWrite,
                 MemtoReg

@@ -18,20 +18,27 @@ module top(
     output [7:0] read_data_2_wire,    // contents of register at address read_reg_2
     output [31:0] sign_extend_wire, // output of sign extender module
     output [98:0] ID_EX_output_port,
+    output ID_EX_branch_wire,
     output [7:0] ALU_op_2,
     output [3:0] ALU_control_signal_wire,
     output zero_wire,
-    output [7:0] ALU_result_wire,    
-    output [4:0] rt_rd_mux_output_wire,
+    output [7:0] ALU_result_wire,
+    output [4:0] rt_rd_reg_address_mux_out,
+    output [31:0] left_shift_wire, 
+    output [31:0] ID_EX_PC_value,   
     output [58:0] EX_MEM_output_port,
+    output data_mem_MemRead_signal,
     output PCSrc,
     output [31:0] target_pc_wire,
     output [7:0] data_mem_dout_wire,
     output [31:0] selected_address_for_pc,
     output [31:0] PC_value_after_EX_MEM,
     output [31:0] next_pc_wire,
-    output [17:0] MEM_WB_output_port,
-    output [7:0] write_back_data_wire/*,
+    output [7:0] data_mem_write_addr,
+    output [7:0] data_mem_write_data,
+    output [22:0] MEM_WB_output_port,
+    output [7:0] write_back_data_wire,
+    output [4:0] regfile_write_reg_address/*,
     output [4:0] rt_rd_mux_output_wire,
 
     
@@ -79,6 +86,7 @@ module top(
 
     control control_inst(
         .opcode(IF_ID_output_port[63:58]),  // read opcode from IF/ID register
+        .funct(IF_ID_output_port[37:32]),
         .RegDst(RegDst_wire),
         .Branch(Branch_wire),
         .MemRead(MemRead_wire),
@@ -96,9 +104,9 @@ module top(
         .clk(clk),
         .read_reg_1(IF_ID_output_port[57:53]),  // extract address of rs register
         .read_reg_2(IF_ID_output_port[52:48]),  // extract address of rt register
-        .write_reg_addr(rt_rd_mux_output_wire), // ****** need modfication ****** //
+        .write_reg_addr(regfile_write_reg_address), // ****** need modfication ****** //
         .write_data(write_back_data_wire),
-        .regWrite(RegWrite_wire),
+        .regWrite(MEM_WB_output_port[1]),
         .read_data_1(read_data_1_wire),
         .read_data_2(read_data_2_wire)
     );
@@ -132,14 +140,15 @@ module top(
     );
     
     // left shift by 2
-    wire [31:0] left_shift_wire;
+    // wire [31:0] left_shift_wire;
     shift_module shift_inst(
-        .in_data(ID_EX_output_port[87:56]),
+        .in_data(ID_EX_output_port[88:57]),
         .out_data(left_shift_wire)
     );
     
     // adder module
     //wire [31:0] selected_address_for_pc;
+    assign ID_EX_PC_value = ID_EX_output_port[40:9];
     adder adder_inst(
         .a(ID_EX_output_port[40:9]),    // value of pc from ID/EX
         .b(left_shift_wire),
@@ -170,15 +179,18 @@ module top(
         .Zero(zero_wire),
         .ALU_result(ALU_result_wire)
     );
-   
+    
+    // output of mux which is either the address of rt or rd register.
+    //wire [4:0] rt_rd_reg_address_mux_out;
     // Mux for selecting rt or rd
     rt_rd_mux rt_rd_mux_inst(
         .rt(ID_EX_output_port[93:89]),
         .rd(ID_EX_output_port[98:94]),
         .sel(ID_EX_output_port[0]),     // RegDst control signal extracted from pipeline register
-        .out(rt_rd_mux_output_wire)
+        .out(rt_rd_reg_address_mux_out)
     );    
     
+    assign ID_EX_branch_wire = ID_EX_output_port[1];
     // ******************************************* //
     // EX_MEM stage
     EX_MEM_reg EX_MEM_reg_inst(
@@ -192,7 +204,7 @@ module top(
         .zero_signal(zero_wire),
         .alu_result(ALU_result_wire),
         .data_mem_write_data(ID_EX_output_port[56:49]),
-        .rt_rd_reg(rt_rd_mux_output_wire),
+        .rt_rd_reg(rt_rd_reg_address_mux_out),
         .out(EX_MEM_output_port)
     );
     
@@ -210,7 +222,10 @@ module top(
         .sel(PCSrc),
         .y(target_pc_wire)
     );
-
+    
+    assign data_mem_write_addr = EX_MEM_output_port[45:38];
+    assign data_mem_write_data = EX_MEM_output_port[53:46];
+    assign data_mem_MemRead_signal = EX_MEM_output_port[1];
     // data memory integration
     data_mem data_mem_inst(
         .clk(clk),
@@ -229,10 +244,14 @@ module top(
         .RegWrite(EX_MEM_output_port[4]),
         .data_mem_dout(data_mem_dout_wire),
         .alu_result(EX_MEM_output_port[45:38]),
+        .mem_wb_rt_rd_reg_address(EX_MEM_output_port[58:54]),
         .out(MEM_WB_output_port)
         
     );
     
+    // address of write for register file
+    // feb back to regfile
+    assign regfile_write_reg_address = MEM_WB_output_port[22:18];
     // Mux for selecting the data-out from memory and 
     // ALU result
     mux_2x1 mux_alu_dout(
